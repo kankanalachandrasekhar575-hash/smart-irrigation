@@ -1,9 +1,0 @@
-The dashboard currently has some limitations. The data may not load in the preview because the Flask server is not running or the API connection is not working correctly. 
-The dashboard works locally when the Flask application is running and the page is opened through the Flask server.
-The dashboard uses simulated values instead of real sensor readings. 
-These values are stored temporarily and reset whenever the application restarts.
-No database or physical hardware is connected.
-The pump can be switched ON or OFF manually, but automatic watering and scheduling features are not available.
-Error handling is basic.
-If the API connection fails, an error message is displayed, but the dashboard does not automatically retry the request.
-The application has not been fully tested on all mobile devices and browsers.
