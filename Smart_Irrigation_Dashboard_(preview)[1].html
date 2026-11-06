@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Smart Irrigation Dashboard</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#eef3ec;--ink:#1d2b22;--muted:#5d6f63;--card:#fbfdfa;--line:#cddbcf;--dry:#b5651d;--dry-bg:#f6e3cc;--ok:#1f6b45;--ok-bg:#d5ecdc;--water:#1c6ea4;--err:#a12d2d;color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121a15;--ink:#e3ece5;--muted:#9bb0a1;--card:#1a251e;--line:#2c3d32;--dry:#f0b46c;--dry-bg:#3d2a14;--ok:#7fd6a3;--ok-bg:#16301f;--water:#4aa3df;--err:#ff8a8a;color-scheme:dark}}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 Georgia,"Times New Roman",serif}
+main{max-width:760px;margin:0 auto;padding:28px 20px 48px}
+h1{font-size:2rem;margin:0 0 6px;letter-spacing:-.01em}
+.note{color:var(--muted);font-size:.9rem;margin:0 0 20px}
+h2{font-size:1rem;font-weight:normal;color:var(--muted);margin:0 0 8px}
+.banner{display:flex;flex-wrap:wrap;align-items:baseline;gap:14px;padding:16px 20px;border-radius:6px;font-size:1.5rem;margin-bottom:20px;background:var(--ok-bg);color:var(--ok);transition:background .3s,color .3s}
+.banner.dry{background:var(--dry-bg);color:var(--dry)}
+.banner small{font-size:.9rem;color:var(--muted)}
+.cards{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.card{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:18px}
+.value{margin:0 0 12px;font-size:2.6rem;line-height:1.1}
+.value small{font-size:1rem;color:var(--muted);margin-left:4px}
+.bar{height:8px;background:var(--line);border-radius:4px;overflow:hidden}
+#bar{height:100%;width:0;background:var(--water);transition:width .4s}
+button{font:inherit;width:100%;padding:10px 14px;border:0;border-radius:6px;background:var(--water);color:#fff;cursor:pointer}
+button.on{background:#33463a}
+button:disabled{opacity:.6;cursor:wait}
+button:focus-visible{outline:3px solid var(--water);outline-offset:2px}
+.message{min-height:1.5em;margin-top:16px;color:var(--muted)}
+.message.error{color:var(--err)}
+.log{margin-top:20px;background:var(--card);border:1px solid var(--line);border-radius:6px;padding:14px;font:13px/1.5 ui-monospace,Menlo,Consolas,monospace;overflow-x:auto;white-space:pre;max-height:200px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<main>
+<h1>Smart Irrigation Dashboard</h1>
+<p class="note">Browser preview: the Flask API below is simulated in JavaScript with the same logic as app.py. Submit the Flask project, not this file.</p>
+
+<section id="banner" class="banner" aria-live="polite"><span id="soilStatus">Loading…</span><small id="threshold"></small></section>
+
+<section class="cards">
+<article class="card"><h2>Soil moisture</h2><p class="value"><span id="moisture">–</span><small>%</small></p><div class="bar"><div id="bar"></div></div></article>
+<article class="card"><h2>Temperature</h2><p class="value"><span id="temp">–</span><small>°C</small></p></article>
+<article class="card"><h2>Pump</h2><p class="value"><span id="pump">–</span></p><button id="toggle" type="button">Turn pump on</button></article>
+</section>
+
+<p id="message" class="message" role="status"></p>
+<div class="log" id="log" aria-label="API log">API log appears here…</div>
+</main>
+<script>
+// ---- Simulated backend (mirrors app.py) ----
+const DRY_THRESHOLD = 35;
+const state = {soil_moisture: 50.0, temperature: 26.0, pump_on: false};
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const round1 = v => Math.round(v * 10) / 10;
+const rand = (a, b) => a + Math.random() * (b - a);
+
+function simulate() {
+  const drift = state.pump_on ? rand(1, 4) : -rand(0, 2.5);
+  state.soil_moisture = round1(clamp(state.soil_moisture + drift, 0, 100));
+  state.temperature = round1(clamp(state.temperature + rand(-0.5, 0.5), 15, 45));
+}
+function payload() {
+  return {
+    soil_moisture: state.soil_moisture, temperature: state.temperature,
+    pump_status: state.pump_on ? "ON" : "OFF",
+    soil_status: state.soil_moisture < DRY_THRESHOLD ? "Dry" : "Normal",
+    dry_threshold: DRY_THRESHOLD
+  };
+}
+function mockFetch(url, opts = {}) {
+  let status = 200, body;
+  if (url === "/api/status") { simulate(); body = payload(); }
+  else if (url === "/api/pump" && opts.method === "POST") {
+    let data = null; try { data = JSON.parse(opts.body); } catch (e) {}
+    if (!data || typeof data !== "object" || !("is_on" in data)) { status = 400; body = {success: false, error: 'Send JSON like {"is_on": true}.'}; }
+    else if (typeof data.is_on !== "boolean") { status = 400; body = {success: false, error: '"is_on" must be true or false.'}; }
+    else { state.pump_on = data.is_on; body = Object.assign({success: true}, payload()); }
+  } else { status = 404; body = {error: "Not found"}; }
+  log(`${opts.method || "GET"} ${url} -> ${status}\n${JSON.stringify(body)}`);
+  return Promise.resolve({ok: status < 400, status, json: () => Promise.resolve(body)});
+}
+const logLines = [];
+function log(t) { logLines.unshift(t); logLines.length = Math.min(logLines.length, 6); document.getElementById("log").textContent = logLines.join("\n\n"); }
+
+// ---- Frontend (same as static/app.js, using mockFetch) ----
+let pumpIsOn = false;
+const $ = id => document.getElementById(id);
+function showMessage(t, err = false) { const el = $("message"); el.textContent = t; el.classList.toggle("error", err); }
+function render(d) {
+  pumpIsOn = d.pump_status === "ON";
+  $("moisture").textContent = d.soil_moisture; $("temp").textContent = d.temperature; $("pump").textContent = d.pump_status;
+  $("bar").style.width = d.soil_moisture + "%";
+  $("soilStatus").textContent = "Soil is " + d.soil_status;
+  $("threshold").textContent = "Dry below " + d.dry_threshold + "%";
+  $("banner").classList.toggle("dry", d.soil_status === "Dry");
+  const b = $("toggle"); b.textContent = pumpIsOn ? "Turn pump off" : "Turn pump on"; b.classList.toggle("on", pumpIsOn);
+}
+async function loadStatus() {
+  try { const r = await mockFetch("/api/status"); if (!r.ok) throw new Error("Server returned " + r.status); render(await r.json()); showMessage(""); }
+  catch (e) { showMessage("Can’t reach the server. Retrying…", true); }
+}
+async function togglePump() {
+  const b = $("toggle"); b.disabled = true;
+  try {
+    const r = await mockFetch("/api/pump", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({is_on: !pumpIsOn})});
+    const d = await r.json();
+    if (!r.ok || !d.success) throw new Error(d.error || "Request failed");
+    render(d); showMessage("Pump turned " + d.pump_status.toLowerCase() + ".");
+  } catch (e) { showMessage("Couldn’t change the pump: " + e.message, true); }
+  finally { b.disabled = false; }
+}
+$("toggle").addEventListener("click", togglePump);
+loadStatus(); setInterval(loadStatus, 3000);
+</script>
+</body>
+</html>

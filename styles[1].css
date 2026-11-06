@@ -1,0 +1,24 @@
+* { box-sizing: border-box; }
+body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: #eef6ee; color: #1f2d1f; }
+.container { max-width: 760px; margin: 0 auto; padding: 24px 16px 48px; text-align: center; }
+h1 { margin-bottom: 24px; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 16px; }
+.card { background: #fff; border-radius: 12px; padding: 18px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+.card h2 { margin: 0 0 8px; font-size: 1rem; color: #4a5d4a; }
+.value { margin: 0; font-size: 2rem; font-weight: 700; }
+.pump.on { color: #1b8a3a; }
+.pump.off { color: #b33a3a; }
+.soil-status { margin: 28px 0 20px; font-size: 1.1rem; }
+.soil-status small { display: block; margin-top: 6px; color: #667; }
+.badge { display: inline-block; padding: 6px 16px; border-radius: 999px;
+  font-weight: 700; color: #fff; background: #888; }
+.badge.dry { background: #d9822b; }
+.badge.normal { background: #2e9e4f; }
+.pump-btn { font-size: 1.1rem; font-weight: 700; padding: 14px 36px; border: none;
+  border-radius: 10px; color: #fff; background: #2e9e4f; cursor: pointer; }
+.pump-btn.turn-off { background: #b33a3a; }
+.pump-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.message { min-height: 1.4em; margin-top: 14px; color: #355; }
+.message.error { color: #b33a3a; }

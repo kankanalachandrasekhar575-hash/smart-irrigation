@@ -1,0 +1,7 @@
+When the user clicks the water pump button, JavaScript sends a Post request to  with a JSON value indicating whether the pump should be ON or OFF. 
+checks whether the received value is valid.
+If it is valid, the pump status is updated, and the server sends the new status back to the webpage. 
+If the value is invalid, returns an error message in code.
+All the current values are stored in the server memory. 
+The soil moisture and temperature readings are randomly generated instead of coming from physical sensors.
+If the soil moisture falls below 40%, the dashboard displays the soil condition is Dry otherwise, it displays shows Normal
